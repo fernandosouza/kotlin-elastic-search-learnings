@@ -1,112 +1,137 @@
 # 🔍 Elastic Search Studies
 
-Projeto mínimo e didático para aprender **Elasticsearch** integrado a um backend web em **Kotlin**.
+Projeto didático para aprender **Elasticsearch** integrado a um backend web profissional em **Kotlin + Spring Boot**, com **MongoDB** como banco primário.
+
+## 🌿 As duas versões (branches)
+
+| Branch | O que é | Quando usar |
+|---|---|---|
+| `v1-raw-ktor` | Versão crua: Ktor + client oficial do ES na mão, sem banco | Entender **o que acontece por baixo** |
+| `main` (esta) | Versão "de empresa": Spring Boot + Spring Data + MongoDB | Ver como fica **no código do trabalho** |
+
+As **funcionalidades são idênticas** — compare os dois branches lado a lado: cada query que o Spring "esconde" aqui existe escrita à mão na v1. Esse é o superpoder deste repo.
 
 ---
 
-## 🗺️ A ideia em 30 segundos
+## 🗺️ A arquitetura em 30 segundos
 
 ```
-Navegador (fetch)          Backend Kotlin (Ktor)          Elasticsearch (Docker)
-     :qualquer      ──────►      :8080           ──────►        :9200
-   "barra de busca"         valida + monta query          motor de busca (REST/JSON)
+                                        ┌──► MongoDB :27017  (fonte da verdade)
+Navegador ──► Spring Boot :8080 ────────┤      CRUD, detalhe por id
+ (fetch)      valida, orquestra         └──► Elasticsearch :9200  (motor de busca)
+                                               full-text, filtros, relevância
 ```
 
-- **Elasticsearch** = um servidor de busca. Você manda JSON via HTTP, ele devolve JSON. Só isso.
-- **O backend** é o intermediário: o front nunca fala com o ES diretamente.
-- **Domínio de exemplo**: catálogo de produtos (como a busca de um e-commerce).
+- **Escrita** (`POST /products`): grava no Mongo **e** replica no ES (dual-write didático — produção usaria outbox/CDC).
+- **Leitura por id** (`GET /products/1`): Mongo. Quem quer **o dado** pergunta à fonte da verdade.
+- **Busca** (`/search`, `/category`, `/price`): ES. Quem quer **achar** dados pergunta ao motor de busca.
+- **O índice do ES é descartável**: apague-o e ele se reconstrói a partir do Mongo na próxima subida (veja `DataSeeder`).
 
 ---
 
-## 📁 O que foi feito (5 arquivos importam)
+## 📁 Mapa do código (e onde está cada conceito)
 
-| Arquivo | O que é |
+| Arquivo | Conceito que ensina |
 |---|---|
-| `docker-compose.yml` | Sobe o Elasticsearch local (1 nó, sem senha, só p/ estudo) |
-| `src/main/kotlin/Product.kt` | O **documento** (unidade básica do ES) como data class |
-| `src/main/kotlin/ElasticClient.kt` | A conexão app → ES (um wrapper HTTP tipado) |
-| `src/main/kotlin/ProductRepository.kt` | ⭐ **O coração do estudo**: cada método = 1 conceito do ES |
-| `src/main/kotlin/Main.kt` | API web (Ktor) que expõe as buscas em rotas HTTP |
-| `requests.http` | Requests clicáveis no IntelliJ (fale com o ES direto e com a API) |
+| `CatalogApplication.kt` | Inversão de controle — o Spring monta as peças, não você |
+| `product/Product.kt` | Entidade do banco primário (fonte da verdade) |
+| `product/ProductMongoRepository.kt` | Mágica nº 1: interface vazia → CRUD implementado pelo Spring |
+| `search/ProductSearchDocument.kt` | Mapping por anotações (`@Field` substitui o `createIndex` da v1) |
+| `search/ProductSearchRepository.kt` | ⭐ Mágica nº 2: **query pelo nome do método** + `@Query` p/ multi_match |
+| `product/ProductService.kt` | Orquestração: a regra "escrita → Mongo+ES, leitura → depende" |
+| `web/ProductController.kt` | Rotas por anotação, validação automática (400 de graça) |
+| `config/DataSeeder.kt` | Seed na direção certa: Mongo → ES (reindex a cada subida) |
+| `application.yml` | Configuração externalizada (com pegadinha do Boot 4 documentada!) |
 
-Cada método tem um comentário `CONCEITO — ...` explicando o que acontece por baixo.
+Cada método continua com seu comentário `CONCEITO — ...`, agora comparando com a v1.
 
 ---
 
 ## ▶️ Como rodar (3 passos)
 
 ```bash
-# 1. Abra o Docker Desktop (primeira vez: aceite os termos e aguarde ele iniciar)
+# 1. Abra o Docker Desktop
 open -a Docker
 
-# 2. Suba o Elasticsearch (primeira vez baixa a imagem, ~600MB)
+# 2. Suba MongoDB + Elasticsearch
 docker compose up -d
-# confira: curl http://localhost:9200  (ou abra no navegador)
 
-# 3. Rode a aplicação (ou clique em ▶ no Main.kt pelo IntelliJ)
-mvn compile exec:java
+# 3. Rode a aplicação (ou ▶ no CatalogApplication.kt pelo IntelliJ)
+mvn spring-boot:run
 ```
 
-Depois abra o `requests.http` no IntelliJ e vá clicando nos requests. 🎯
+Depois abra o `requests.http` e vá clicando. 🎯
 
 > **`command not found: docker`?** O CLI está em `~/.docker/bin` mas não no seu PATH.
 > Adicione ao `~/.zshrc`: `export PATH="$HOME/.docker/bin:$PATH"` (e abra um terminal novo).
 
+**Espiar o Mongo por dentro:**
+```bash
+docker exec -it mongo-estudos mongosh catalog
+db.products.find()          # a fonte da verdade
+```
+
 ---
 
-## 🧠 Conceitos-chave (o vocabulário mínimo)
+## 🧠 Conceitos-chave
 
-| Conceito | Em uma frase | Análogo no mundo que você conhece |
-|---|---|---|
-| **Documento** | Um objeto JSON armazenado | Uma linha do banco / um objeto JS |
-| **Índice** | Coleção de documentos | Uma tabela |
-| **Mapping** | Define o tipo de cada campo | Schema da tabela |
-| **Índice invertido** | Estrutura `token → [docs]` que torna a busca rápida | Índice remissivo de livro |
-| **Analisador** | Quebra texto em tokens ao indexar E ao buscar | `.toLowerCase().split(' ')` turbinado |
-| **`text` vs `keyword`** | `text` = analisado (busca livre); `keyword` = exato (filtros) | ⭐ decisão nº 1 do ES |
-| **`match` vs `term`** | `match` analisa a busca; `term` compara exato | busca livre vs `===` |
-| **Score (BM25)** | Nota de relevância que ordena os resultados | Ranking do Google |
-| **Near real-time** | Doc indexado aparece na busca ~1s depois (refresh) | Não é banco transacional! |
-| **Bulk** | Várias operações em 1 request | `Promise.all` do bem |
+### Do Elasticsearch (iguais nas duas versões)
 
-**A regra de bolso mais importante:**
-> Texto livre digitado por humano → query `match` em campo `text`.
-> Valor exato (categoria, status, id) → query `term` em campo `keyword`.
+| Conceito | Em uma frase |
+|---|---|
+| **Documento / Índice / Mapping** | JSON armazenado / a "tabela" / o "schema" dos campos |
+| **`text` vs `keyword`** | analisado p/ busca livre vs exato p/ filtros — ⭐ decisão nº 1 |
+| **Índice invertido + analisador** | `token → docs`, alimentado pela tokenização |
+| **`match` vs `term` vs `range`** | busca analisada / igualdade exata / faixa numérica |
+| **Score (BM25)** | nota de relevância que ordena resultados |
+| **Near real-time** | doc aparece na busca ~1s após indexado |
+
+### Novos desta versão (o "mundo Spring")
+
+| Conceito | Em uma frase |
+|---|---|
+| **Inversão de controle / DI** | você declara as peças; o container instancia e conecta |
+| **Spring Data Repository** | interface vazia → implementação gerada em runtime |
+| **Derived queries** | `findByPriceLessThanEqual(x)` → o **nome** vira a query `range` |
+| **`@Query`** | escotilha p/ escrever a query nativa quando o nome não alcança |
+| **Fonte da verdade vs réplica de busca** | Mongo é dono do dado; ES é cópia otimizada e **descartável** |
+| **Dual-write vs CDC** | replicar na mão é frágil; produção usa log do banco (Debezium) |
+| **Config externalizada** | `application.yml` + env vars; e configuração errada **falha em silêncio** |
 
 ---
 
 ## 📚 Next steps — roadmap de estudo
 
 ### Nível 1 — Dominar o que já existe
-- [ ] Rode cada request do `requests.http` e leia a resposta JSON inteira (repare em `_score`, `hits.total`)
-- [ ] Use o `_analyze` com textos diferentes e observe os tokens
-- [ ] Busque `teclados` (plural) e veja que NÃO acha — entenda o porquê (analisador padrão não faz stemming)
-- [ ] Delete o índice (`DELETE http://localhost:9200/products`) e reinicie a app para vê-lo ser recriado
+- [ ] Rode os requests e compare: `GET /products/1` (Mongo) vs `/search` (ES) — mesma API, storages diferentes
+- [ ] Leia `ProductSearchRepository` e ache na v1 (`git diff v1-raw-ktor main -- src`) a query equivalente escrita à mão
+- [ ] Apague o índice (`DELETE http://localhost:9200/products`), suba a app e veja o ES se reconstruir do Mongo
+- [ ] Use o `_analyze` do `requests.http` com textos diferentes e observe os tokens
 
 ### Nível 2 — Melhorar a busca (features para implementar)
 - [ ] **Tipos de campo do mapping** 📌: aprofundar em como cada tipo funciona e quando usar (text, keyword, numéricos, date, boolean, object/nested, multi-fields) — *tópico marcado para estudo*
-- [ ] **Analyzer `portuguese`**: no mapping, faça plural/stemming funcionar (`"analyzer": "portuguese"`)
-- [ ] **Query `bool`**: combine full-text + categoria + preço numa busca só (`must` + `filter`) — é a busca real de e-commerce
-- [ ] **Fuzziness**: tolerar erro de digitação (`"fuzziness": "AUTO"` → "teclaod" acha "teclado")
-- [ ] **Paginação**: `from`/`size` na busca (e leia sobre o limite de 10.000)
-- [ ] **Highlight**: devolver o trecho que casou com `<em>` (como o Google faz em negrito)
-- [ ] **Agregações**: contar produtos por categoria (facets: "periferico (4)") — o outro superpoder do ES
-- [ ] **Autocomplete**: campo `search_as_you_type` para sugestões enquanto digita
+- [ ] **Analyzer `portuguese`**: plural/stemming (`@Field(analyzer = "portuguese")`) — a v1 fazia isso no JSON do mapping
+- [ ] **Query `bool`**: full-text + categoria + preço numa busca só — a busca real de e-commerce (use `NativeQuery` ou `CriteriaQuery` do Spring Data)
+- [ ] **Fuzziness**: tolerar erro de digitação ("teclaod" → "teclado")
+- [ ] **Paginação**: troque `List<>` por `Page<>` + `Pageable` no repositório — o Spring Data pagina sozinho
+- [ ] **Highlight**: devolver o trecho que casou (`@Highlight` no Spring Data)
+- [ ] **Agregações**: contar produtos por categoria (facets) — o outro superpoder do ES
 
-### Nível 3 — Visão de arquitetura (como é em produção)
-- [ ] **Kibana**: adicione ao docker-compose e explore o Dev Tools (console interativo de queries)
-- [ ] **ES não é fonte de verdade**: estude o padrão *dual-write / CDC* — Postgres é o dono dos dados, ES recebe uma cópia p/ busca
-- [ ] **Shards e réplicas**: por que o cluster health fica `yellow` com 1 nó
-- [ ] **Testcontainers**: testes de integração subindo um ES descartável
-- [ ] **Segurança**: reative `xpack.security` e conecte com API key (como seria em produção)
+### Nível 3 — Visão de produção
+- [ ] **Kibana**: adicione ao docker-compose e explore o Dev Tools
+- [ ] **CDC de verdade**: substitua o dual-write do `ProductService` por Debezium lendo o oplog do Mongo
+- [ ] **Testcontainers**: testes de integração subindo Mongo + ES descartáveis
+- [ ] **Resiliência**: o que acontece se o ES estiver fora? (try/catch no dual-write, fila de retry)
+- [ ] **Segurança**: reative `xpack.security` e conecte com API key
+- [ ] **Shards e réplicas**: por que o cluster health é `yellow` com 1 nó
 
 ### 📖 Referências
 - [Elasticsearch Guide (oficial)](https://www.elastic.co/guide/en/elasticsearch/reference/current/index.html)
-- [Client Java (oficial)](https://www.elastic.co/guide/en/elasticsearch/client/java-api-client/current/index.html)
-- [Full text queries](https://www.elastic.co/guide/en/elasticsearch/reference/current/full-text-queries.html)
+- [Spring Data Elasticsearch (oficial)](https://docs.spring.io/spring-data/elasticsearch/reference/)
+- [Query methods / derived queries](https://docs.spring.io/spring-data/elasticsearch/reference/elasticsearch/repositories/elasticsearch-repository-queries.html)
 
 ---
 
 ## 🔧 Stack
 
-Kotlin 2.3 · Maven · Ktor 3.5 (servidor web) · `elasticsearch-java` 9.4.4 (client oficial) · Elasticsearch 9.4.4 (Docker) · Java 17+
+Kotlin 2.3 · Maven · Spring Boot 4.1 (WebMVC + Data MongoDB + Data Elasticsearch) · MongoDB 8 (Docker) · Elasticsearch 9.4.4 (Docker) · Java 17+

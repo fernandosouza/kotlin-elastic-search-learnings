@@ -34,10 +34,15 @@ Content-Type: application/json
 { "query": { "match_all": {} } }
 
 
-### ══════════ PARTE 2: Falando com a NOSSA API Kotlin (porta 8080) ══════════
+### ══════════ PARTE 2: Falando com a NOSSA API Spring Boot (porta 8080) ══════════
 ### Este é o caminho que o front usaria: fetch('/products/search?q=...')
+### Detalhe de arquitetura: /search, /category e /price consultam o ELASTICSEARCH;
+### /products/{id} consulta o MONGO (fonte da verdade). Mesma API, storages diferentes.
 
-### Busca full-text (rota da barra de busca)
+### Detalhe por id — vem do MONGO, não do ES
+GET http://localhost:8080/products/1
+
+### Busca full-text (rota da barra de busca) — vem do ES
 GET http://localhost:8080/products/search?q=teclado
 
 ### Busca com erro de caixa — funciona (lowercase do analisador)
@@ -52,7 +57,8 @@ GET http://localhost:8080/products/category/periferico
 ### Filtro por faixa de preço (query range)
 GET http://localhost:8080/products/price?max=100
 
-### Indexar um produto novo (aparece nas buscas ~1s depois)
+### Criar produto: grava no MONGO (verdade) e replica no ES (busca) — dual-write.
+### Depois confira: GET /products/9 (Mongo) e /products/search?q=mousepad (ES)
 POST http://localhost:8080/products
 Content-Type: application/json
 

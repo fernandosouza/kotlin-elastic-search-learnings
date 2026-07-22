@@ -1,0 +1,24 @@
+# CONCEITO — Configuração externalizada:
+# No Spring, conexões/portas/credenciais ficam FORA do código. O Boot lê este
+# arquivo e AUTOCONFIGURA os beans: como existe spring-data-mongodb no classpath
+# e uma uri aqui, ele cria o MongoClient sozinho — ninguém escreve "new".
+# Em produção, estes valores viriam de variáveis de ambiente (12-factor):
+#   ex.: SPRING_DATA_MONGODB_URI sobrescreve spring.data.mongodb.uri
+spring:
+  application:
+    name: catalog
+
+  # ⚠️ Pegadinha do Spring Boot 4: até o Boot 3 era "spring.data.mongodb.uri";
+  # a v4 renomeou para "spring.mongodb.uri". Com o nome antigo a propriedade é
+  # IGNORADA em silêncio e o driver cai no default (localhost:27017, banco "test").
+  # Muitos tutoriais ainda mostram o nome antigo — cuidado.
+  mongodb:
+    # Banco primário — fonte da verdade dos produtos
+    uri: mongodb://localhost:27017/catalog
+
+  elasticsearch:
+    # Motor de busca — recebe uma cópia otimizada p/ buscar
+    uris: http://localhost:9200
+
+server:
+  port: 8080

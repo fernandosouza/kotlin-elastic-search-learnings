@@ -1,6 +1,16 @@
-# Sobe um Elasticsearch local para estudo: docker compose up -d
-# Depois acesse http://localhost:9200 no navegador — a resposta é JSON puro.
+# Infra local de estudo: docker compose up -d
+#   - MongoDB (27017)       -> banco primário, fonte da verdade
+#   - Elasticsearch (9200)  -> motor de busca, cópia otimizada p/ buscar
 services:
+  mongodb:
+    image: mongo:8.0
+    container_name: mongo-estudos
+    ports:
+      # 27017 = porta padrão do MongoDB (protocolo próprio, não HTTP como o ES)
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:9.4.4
     container_name: es-estudos
@@ -24,3 +34,4 @@ services:
 
 volumes:
   esdata:
+  mongodata:
