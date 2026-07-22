@@ -1,0 +1,59 @@
+### ══════════ PARTE 1: Falando DIRETO com o Elasticsearch (porta 9200) ══════════
+### O ES é só uma API REST. Tudo que o client Kotlin faz, você pode fazer aqui.
+### (Clique no ▶ verde ao lado de cada request no IntelliJ)
+
+### Quem é você? — informações básicas do nó
+GET http://localhost:9200
+
+### Saúde do cluster (green/yellow/red — yellow é normal com 1 nó só)
+GET http://localhost:9200/_cluster/health
+
+### Listar os índices existentes
+GET http://localhost:9200/_cat/indices?v
+
+### Ver o mapping do índice products (o que o createIndexIfMissing criou)
+GET http://localhost:9200/products/_mapping
+
+### ⭐ Ver o analisador em ação: como o texto vira tokens no índice invertido.
+### Repare: tudo minúsculo, sem pontuação — mas o acento de "Mecânico" FICA.
+POST http://localhost:9200/products/_analyze
+Content-Type: application/json
+
+{ "field": "name", "text": "Teclado Mecânico RGB!" }
+
+### Buscar direto no ES — exatamente o que ProductRepository.searchText monta
+POST http://localhost:9200/products/_search
+Content-Type: application/json
+
+{ "query": { "multi_match": { "query": "teclado", "fields": ["name", "description"] } } }
+
+### Ver TODOS os documentos do índice
+POST http://localhost:9200/products/_search
+Content-Type: application/json
+
+{ "query": { "match_all": {} } }
+
+
+### ══════════ PARTE 2: Falando com a NOSSA API Kotlin (porta 8080) ══════════
+### Este é o caminho que o front usaria: fetch('/products/search?q=...')
+
+### Busca full-text (rota da barra de busca)
+GET http://localhost:8080/products/search?q=teclado
+
+### Busca com erro de caixa — funciona (lowercase do analisador)
+GET http://localhost:8080/products/search?q=TECLADO
+
+### Busca em vários campos — "ruído" está só na description do headset
+GET http://localhost:8080/products/search?q=ruído
+
+### Filtro exato por categoria (query term em campo keyword)
+GET http://localhost:8080/products/category/periferico
+
+### Filtro por faixa de preço (query range)
+GET http://localhost:8080/products/price?max=100
+
+### Indexar um produto novo (aparece nas buscas ~1s depois)
+POST http://localhost:8080/products
+Content-Type: application/json
+
+{ "id": "9", "name": "Mousepad XL", "description": "Mousepad extra grande de tecido", "category": "periferico", "price": 19.90 }

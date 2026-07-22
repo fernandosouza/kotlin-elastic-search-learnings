@@ -1,0 +1,26 @@
+# Sobe um Elasticsearch local para estudo: docker compose up -d
+# Depois acesse http://localhost:9200 no navegador — a resposta é JSON puro.
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.4
+    container_name: es-estudos
+    environment:
+      # Em produção o ES roda em CLUSTER (vários nós dividindo os dados).
+      # "single-node" desliga a procura por outros nós — 1 nó basta p/ estudo.
+      - discovery.type=single-node
+
+      # Desliga autenticação/TLS. NUNCA faça isso em produção;
+      # aqui evita configurar senha e certificado só para aprender.
+      - xpack.security.enabled=false
+
+      # Limita a memória da JVM do ES (o padrão consome metade da RAM da máquina).
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      # 9200 = porta da API REST do ES (a que o nosso client Kotlin usa).
+      - "9200:9200"
+    volumes:
+      # Persiste os dados fora do container: "docker compose down" não apaga os índices.
+      - esdata:/usr/share/elasticsearch/data
+
+volumes:
+  esdata:
