@@ -25,8 +25,8 @@ import io.ktor.server.routing.routing
  *   2. cria o índice+mapping  4. expõe rotas HTTP de busca
  */
 fun main() {
-    val client = createElasticClient()
-    val repository = ProductRepository(client)
+    val elasticsearchClient = createElasticClient()
+    val repository = ProductRepository(elasticsearchClient)
 
     repository.createIndexIfMissing()
     repository.seed(sampleProducts())

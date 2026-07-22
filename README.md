@@ -84,6 +84,7 @@ Depois abra o `requests.http` no IntelliJ e vá clicando nos requests. 🎯
 - [ ] Delete o índice (`DELETE http://localhost:9200/products`) e reinicie a app para vê-lo ser recriado
 
 ### Nível 2 — Melhorar a busca (features para implementar)
+- [ ] **Tipos de campo do mapping** 📌: aprofundar em como cada tipo funciona e quando usar (text, keyword, numéricos, date, boolean, object/nested, multi-fields) — *tópico marcado para estudo*
 - [ ] **Analyzer `portuguese`**: no mapping, faça plural/stemming funcionar (`"analyzer": "portuguese"`)
 - [ ] **Query `bool`**: combine full-text + categoria + preço numa busca só (`must` + `filter`) — é a busca real de e-commerce
 - [ ] **Fuzziness**: tolerar erro de digitação (`"fuzziness": "AUTO"` → "teclaod" acha "teclado")
