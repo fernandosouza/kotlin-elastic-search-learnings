@@ -28,18 +28,22 @@ class ProductController(private val service: ProductService) {
 
     /** Busca full-text no ES. Ex.: GET /products/search?q=teclado */
     @GetMapping("/search")
-    fun search(@RequestParam q: String): List<ProductHit> =
-        service.searchText(q)
+    fun search(@RequestParam q: String): List<ProductHit> {
+        return service.searchText(q)
+    }
 
     /** Filtro exato por categoria (ES). Ex.: GET /products/category/periferico */
     @GetMapping("/category/{category}")
-    fun byCategory(@PathVariable category: String): List<ProductSearchDocument> =
-        service.byCategory(category)
+    fun byCategory(@PathVariable category: String): List<ProductSearchDocument> {
+        return service.byCategory(category)
+    }
+
 
     /** Filtro por faixa de preço (ES). Ex.: GET /products/price?max=100 */
     @GetMapping("/price")
-    fun priceUpTo(@RequestParam max: Double): List<ProductSearchDocument> =
-        service.priceUpTo(max)
+    fun priceUpTo(@RequestParam max: Double): List<ProductSearchDocument> {
+        return service.priceUpTo(max)
+    }
 
     /**
      * CONCEITO — A divisão de leitura na prática:
@@ -48,12 +52,14 @@ class ProductController(private val service: ProductService) {
      * diferentes por trás. O front nem fica sabendo.
      */
     @GetMapping("/{id}")
-    fun byId(@PathVariable id: String): Product =
-        service.findById(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "produto $id não existe")
+    fun byId(@PathVariable id: String): Product {
+        return service.findById(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "produto $id não existe")
+    }
 
     /** Cria produto: grava no Mongo e replica no ES (ver ProductService.create). */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    fun create(@RequestBody product: Product): Product =
-        service.create(product)
+    fun create(@RequestBody product: Product): Product {
+        return service.create(product)
+    }
 }

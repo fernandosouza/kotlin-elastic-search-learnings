@@ -37,14 +37,16 @@ class ProductService(
     }
 
     /** Leitura por id vai ao MONGO: quem quer O dado pergunta à fonte da verdade. */
-    fun findById(id: String): Product? =
-        mongoRepository.findById(id).orElse(null)
+    fun findById(id: String): Product? {
+        return mongoRepository.findById(id).orElse(null)
+    }
 
     /** Busca full-text vai ao ES; converte SearchHit (score + doc) no DTO da API. */
-    fun searchText(text: String): List<ProductHit> =
-        searchRepository.searchByText(text).map { hit ->
+    fun searchText(text: String): List<ProductHit> {
+        return searchRepository.searchByText(text).map { hit ->
             ProductHit(score = hit.score.toDouble(), product = hit.content)
         }
+    }
 
     /** Filtro exato — ES (derived query sobre campo keyword). */
     fun byCategory(category: String): List<ProductSearchDocument> =
