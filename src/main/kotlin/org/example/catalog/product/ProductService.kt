@@ -3,6 +3,8 @@ package org.example.catalog.product
 import org.example.catalog.search.ProductHit
 import org.example.catalog.search.ProductSearchDocument
 import org.example.catalog.search.ProductSearchRepository
+import org.slf4j.LoggerFactory
+import org.springframework.dao.DataAccessException
 import org.springframework.stereotype.Service
 
 /**
@@ -22,6 +24,8 @@ class ProductService(
     private val searchRepository: ProductSearchRepository,
 ) {
 
+    private val log = LoggerFactory.getLogger(ProductService::class.java)
+
     /**
      * CONCEITO — Dual-write (e sua limitação):
      * Grava no Mongo (fonte da verdade) e replica no ES na sequência.
@@ -32,7 +36,11 @@ class ProductService(
      */
     fun create(product: Product): Product {
         val saved = mongoRepository.save(product)
-        searchRepository.save(ProductSearchDocument.from(saved))
+        try {
+            searchRepository.save(ProductSearchDocument.from(saved))
+        } catch (e: DataAccessException) {
+            log.error("falha ao indexar produto ${saved.id} no Elasticsearch", e)
+        }
         return saved
     }
 
