@@ -103,13 +103,14 @@ db.products.find()          # a fonte da verdade
 ## 📚 Next steps — roadmap de estudo
 
 ### Nível 1 — Dominar o que já existe
-- [ ] Rode os requests e compare: `GET /products/1` (Mongo) vs `/search` (ES) — mesma API, storages diferentes
+- [x] Rode os requests e compare: `GET /products/1` (Mongo) vs `/search` (ES) — mesma API, storages diferentes
 - [ ] Leia `ProductSearchRepository` e ache na v1 (`git diff v1-raw-ktor main -- src`) a query equivalente escrita à mão
-- [ ] Apague o índice (`DELETE http://localhost:9200/products`), suba a app e veja o ES se reconstruir do Mongo
-- [ ] Use o `_analyze` do `requests.http` com textos diferentes e observe os tokens
+- [x] Apague o índice (`DELETE http://localhost:9200/products`), suba a app e veja o ES se reconstruir do Mongo
+- [x] Use o `_analyze` do `requests.http` com textos diferentes e observe os tokens
 
 ### Nível 2 — Melhorar a busca (features para implementar)
 - [ ] **Tipos de campo do mapping** 📌: aprofundar em como cada tipo funciona e quando usar (text, keyword, numéricos, date, boolean, object/nested, multi-fields) — *tópico marcado para estudo*
+- [ ] **Tipos de analyzers** 📌: conhecer os built-in (`standard`, `simple`, `whitespace`, `stop`, `keyword`, `pattern`, `fingerprint` + ~30 de idioma) e a anatomia char filters → tokenizer → token filters; comparar cada um no `_analyze` com a mesma frase
 - [ ] **Analyzer `portuguese`**: plural/stemming (`@Field(analyzer = "portuguese")`) — a v1 fazia isso no JSON do mapping
 - [ ] **Query `bool`**: full-text + categoria + preço numa busca só — a busca real de e-commerce (use `NativeQuery` ou `CriteriaQuery` do Spring Data)
 - [ ] **Fuzziness**: tolerar erro de digitação ("teclaod" → "teclado")
