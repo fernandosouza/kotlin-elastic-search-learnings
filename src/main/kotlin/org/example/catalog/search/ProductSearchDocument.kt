@@ -29,13 +29,15 @@ data class ProductSearchDocument(
 ) {
     companion object {
         /** Tradução entidade (Mongo) -> documento de busca (ES). */
-        fun from(product: Product): ProductSearchDocument = ProductSearchDocument(
-            id = product.id,
-            name = product.name,
-            description = product.description,
-            category = product.category,
-            price = product.price,
-        )
+        fun from(product: Product): ProductSearchDocument {
+            return ProductSearchDocument(
+                id = product.id,
+                name = product.name,
+                description = product.description,
+                category = product.category,
+                price = product.price,
+            )
+        }
     }
 }
 
